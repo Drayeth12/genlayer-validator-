@@ -523,7 +523,7 @@ window.handleLogin = async function() {
     localStorage.setItem('gl_user', JSON.stringify({ uid: userCredential.user.uid, email: userCredential.user.email }))
     playSuccess()
     showMsg('loginMsg', 'Login successful! Redirecting...', 'success')
-    setTimeout(() => { window.location.href = 'genlayer-validator-app.html' }, 1200)
+    setTimeout(() => { window.location.href = '/genlayer-validator-app' }, 1200)
   } catch(err) {
     playError()
     const msgs = {
@@ -542,7 +542,7 @@ window.handleGoogleLogin = async function() {
     const result = await signInWithPopup(auth, googleProvider)
     localStorage.setItem('gl_user', JSON.stringify({ uid: result.user.uid, email: result.user.email }))
     playSuccess()
-    setTimeout(() => { window.location.href = 'genlayer-validator-app.html' }, 800)
+    setTimeout(() => { window.location.href = '/genlayer-validator-app' }, 800)
   } catch(err) {
     playError()
     showMsg('loginMsg', 'Google sign-in failed. Try again.', 'error')
@@ -595,7 +595,7 @@ window.handleCheckVerified = async function() {
       localStorage.setItem('gl_user', JSON.stringify({ uid: auth.currentUser.uid, email: auth.currentUser.email }))
       playSuccess()
       showMsg('signupMsg','Email verified! Redirecting...','success')
-      setTimeout(() => { window.location.href = 'genlayer-validator-app.html' }, 1200)
+      setTimeout(() => { window.location.href = '/genlayer-validator-app' }, 1200)
     } else {
       playError()
       showMsg('signupMsg',"Email not verified yet. Please click the link in your email first.",'error')
@@ -632,7 +632,7 @@ function goToSignupStep(step) {
 
 // Check if already logged in
 const existingUser = localStorage.getItem('gl_user')
-if (existingUser) { window.location.href = 'genlayer-validator-app.html' }
+if (existingUser) { window.location.href = '/genlayer-validator-app' }
 </script>
 
 </body>
