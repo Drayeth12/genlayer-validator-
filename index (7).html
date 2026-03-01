@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GenLayer Idea Validator</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#008080;--gray:#c0c0c0;--dark:#808080;--darker:#404040;
+  --white:#ffffff;--black:#000000;--blue:#000080;
+  --titlebar:linear-gradient(to right,#000080,#1084d0);
+  --green:#00aa00;--yellow:#aaaa00;--red:#aa0000;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);font-family:'VT323',monospace;font-size:18px;min-height:100vh;overflow-x:hidden;}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.025) 2px,rgba(0,0,0,0.025) 4px);pointer-events:none;z-index:9999;}
+
+/* VIEWS */
+#login-view{display:block;}
+#app-view{display:none;}
+
+/* WINDOWS */
+.desktop{max-width:960px;margin:0 auto;padding:24px 20px 40px;}
+.window{background:var(--gray);border:2px solid;border-color:var(--white) var(--darker) var(--darker) var(--white);box-shadow:4px 4px 0 var(--black);margin-bottom:16px;animation:windowOpen 0.25s ease both;}
+@keyframes windowOpen{from{transform:scale(0.97);opacity:0}to{transform:scale(1);opacity:1}}
+.titlebar{background:var(--titlebar);padding:5px 8px;display:flex;align-items:center;justify-content:space-between;user-select:none;}
+.title-text{color:white;font-family:'Press Start 2P',monospace;font-size:8px;}
+.window-body{padding:16px;}
+.inset{background:var(--white);border:2px solid;border-color:var(--dark) var(--white) var(--white) var(--dark);padding:10px;}
+.raised{background:var(--gray);border:2px solid;border-color:var(--white) var(--dark) var(--dark) var(--white);padding:10px;}
+
+/* BUTTONS */
+.btn{background:var(--gray);border:2px solid;border-color:var(--white) var(--dark) var(--dark) var(--white);font-family:'VT323',monospace;font-size:17px;padding:5px 14px;cursor:pointer;color:var(--black);}
+.btn:active{border-color:var(--dark) var(--white) var(--white) var(--dark);transform:translate(1px,1px);}
+.btn:disabled{color:var(--dark);cursor:not-allowed;}
+.btn-primary{background:var(--blue);color:white;font-family:'Press Start 2P',monospace;font-size:7px;padding:10px 18px;border-color:#4040c0 var(--darker) var(--darker) #4040c0;}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+
+/* LOGIN SPECIFIC */
+.login-center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg);}
+.tab-bar{display:flex;gap:2px;margin-bottom:-2px;position:relative;z-index:1;}
+.tab{padding:6px 16px;font-family:'Press Start 2P',monospace;font-size:7px;cursor:pointer;background:var(--gray);border:2px solid;border-color:var(--white) var(--dark) var(--gray) var(--white);}
+.tab.active{background:var(--gray);border-bottom-color:var(--gray);color:var(--blue);}
+.tab-content{display:none;}.tab-content.active{display:block;}
+input[type=email],input[type=password],input[type=text]{width:100%;background:var(--white);border:2px solid;border-color:var(--dark) var(--white) var(--white) var(--dark);font-family:'VT323',monospace;font-size:19px;padding:9px 10px;outline:none;color:var(--black);margin-bottom:10px;display:block;}
+input:focus{border-color:var(--blue) var(--white) var(--white) var(--blue);}
+.field-label{font-family:'Press Start 2P',monospace;font-size:7px;display:block;margin-bottom:6px;color:var(--darker);}
+.msg-box{padding:7px 10px;margin:8px 0;font-size:15px;display:none;border:2px solid;}
+.msg-box.visible{display:block;}
+.msg-box.error{background:#aa0000;color:white;border-color:#ff4444 #770000 #770000 #ff4444;}
+.msg-box.success{background:#005500;color:white;border-color:#00aa00 #003300 #003300 #00aa00;}
+.msg-box.info{background:var(--blue);color:white;border-color:#4040c0 #000040 #000040 #4040c0;}
+.divider-line{display:flex;align-items:center;gap:8px;margin:12px 0;font-size:14px;color:var(--darker);}
+.divider-line::before,.divider-line::after{content:'';flex:1;height:1px;background:var(--dark);}
+.google-btn{width:100%;background:white;border:2px solid var(--dark);font-family:'Press Start 2P',monospace;font-size:7px;padding:9px;cursor:pointer;color:#333;display:flex;align-items:center;justify-content:center;gap:8px;}
+.step-bar{display:flex;gap:0;margin-bottom:14px;}
+.step-item{flex:1;padding:6px 4px;font-family:'Press Start 2P',monospace;font-size:6px;text-align:center;background:var(--gray);border:1px solid var(--dark);color:var(--darker);}
+.step-item.active{background:var(--blue);color:white;border-color:var(--blue);}
+.step-item.done{background:#005500;color:white;border-color:#005500;}
+
+/* APP SPECIFIC */
+.header-inner{text-align:center;padding:16px;}
+.header-title{font-family:'Press Start 2P',monospace;font-size:clamp(9px,1.8vw,15px);color:var(--blue);margin-bottom:8px;}
+.header-sub{font-size:19px;color:var(--darker);margin-bottom:14px;}
+.marquee-bar{background:var(--black);border:2px solid var(--dark);padding:5px 0;overflow:hidden;}
+.marquee-inner{color:#00ff00;font-size:15px;white-space:nowrap;display:inline-block;animation:marquee 22s linear infinite;}
+@keyframes marquee{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}
+.stats-row{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:16px;}
+.stat-inner{text-align:center;padding:12px 8px;}
+.stat-num{font-family:'Press Start 2P',monospace;font-size:clamp(14px,3vw,22px);color:var(--blue);display:block;}
+.stat-lbl{font-size:15px;color:var(--darker);display:block;margin-top:4px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:620px){.two-col,.stats-row{grid-template-columns:1fr;}}
+textarea{width:100%;background:var(--white);border:2px solid;border-color:var(--dark) var(--white) var(--white) var(--dark);font-family:'VT323',monospace;font-size:17px;padding:8px;outline:none;resize:vertical;color:var(--black);line-height:1.5;}
+textarea:focus{border-color:var(--blue) var(--white) var(--white) var(--blue);}
+.progress-wrap{background:var(--white);border:2px solid;border-color:var(--dark) var(--white) var(--white) var(--dark);height:22px;margin:10px 0;overflow:hidden;}
+.progress-fill{height:100%;background:repeating-linear-gradient(90deg,var(--blue) 0,var(--blue) 16px,#4040ff 16px,#4040ff 20px);background-size:20px 100%;width:0%;transition:width 0.4s ease;animation:stripe 0.4s linear infinite;}
+@keyframes stripe{from{background-position:0 0}to{background-position:20px 0}}
+.score-row{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:16px;}
+.score-lbl{width:120px;flex-shrink:0;}
+.score-meter{flex:1;background:var(--white);border:2px solid;border-color:var(--dark) var(--white) var(--white) var(--dark);height:16px;overflow:hidden;}
+.score-fill{height:100%;transition:width 1s cubic-bezier(0.16,1,0.3,1);}
+.score-val{width:36px;text-align:right;font-family:'Press Start 2P',monospace;font-size:9px;}
+.verdict-badge{font-family:'Press Start 2P',monospace;font-size:clamp(8px,1.8vw,11px);padding:10px;text-align:center;border:3px solid;margin:10px 0;animation:flash 0.4s ease 3;}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:0.5}}
+.verdict-go{background:#00aa00;color:white;border-color:#007700 white white #007700;}
+.verdict-needs{background:#aaaa00;color:black;border-color:#777700 white white #777700;}
+.verdict-exists{background:#aa0000;color:white;border-color:#770000 white white #770000;}
+.verdict-notideal{background:#334488;color:white;border-color:#112266 white white #112266;}
+.history-list{max-height:220px;overflow-y:auto;}
+.history-item{background:var(--white);border:1px solid var(--dark);padding:7px 8px;margin-bottom:5px;cursor:pointer;font-size:15px;line-height:1.4;}
+.history-item:hover{background:var(--blue);color:white;}
+.history-verdict{font-family:'Press Start 2P',monospace;font-size:6px;float:right;margin-top:2px;}
+.lb-row{display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px dotted var(--dark);font-size:15px;animation:slideIn 0.3s ease both;}
+@keyframes slideIn{from{transform:translateX(-16px);opacity:0}to{transform:translateX(0);opacity:1}}
+.lb-rank{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--blue);width:22px;}
+.lb-score{margin-left:auto;font-family:'Press Start 2P',monospace;font-size:7px;color:var(--green);}
+.idea-display{background:var(--black);color:#00ff00;padding:10px;font-size:16px;min-height:70px;border:2px solid var(--dark);line-height:1.5;cursor:pointer;}
+.error-box{background:#aa0000;color:white;border:2px solid;border-color:#ff4444 #770000 #770000 #ff4444;padding:8px 10px;margin:8px 0;font-size:15px;display:none;}
+.error-box.visible{display:block;}
+.tag{display:inline-block;background:var(--blue);color:white;padding:2px 8px;font-size:14px;margin:2px;}
+.divider{height:2px;background:var(--dark);border-top:1px solid var(--white);margin:10px 0;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:20px;background:var(--gray);border:2px solid;border-color:var(--white) var(--dark) var(--dark) var(--white);box-shadow:3px 3px 0 black;padding:8px 14px;font-size:15px;z-index:999;transform:translateX(200%);transition:transform 0.3s ease;}
+.toast.show{transform:translateX(0);}
+
+/* SHARE POPUP */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:499;display:none;}
+.overlay.visible{display:block;}
+.popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:500;width:min(420px,92vw);display:none;animation:windowOpen 0.2s ease;}
+.popup.visible{display:block;}
+
+::-webkit-scrollbar{width:16px;}
+::-webkit-scrollbar-track{background:var(--gray);}
+::-webkit-scrollbar-thumb{background:var(--gray);border:2px solid;border-color:var(--white) var(--dark) var(--dark) var(--white);}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===================== LOGIN VIEW ===================== -->
+<div id="login-view">
+<div class="login-center">
+  <div style="width:min(520px,100%)">
+    <div class="window">
+      <div class="titlebar"><span class="title-text">⬡ GenLayer Idea Validator — Login</span></div>
+      <div class="window-body">
+        <div style="text-align:center;margin-bottom:20px;padding:10px 0">
+          <!-- GenLayer Logo -->
+          <div style="display:inline-flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px">
+            <img src="data:image/png;base64,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" style="width:52px;height:52px;mix-blend-mode:multiply;"/>
+            <div style="text-align:left">
+              <div style="font-family:'Press Start 2P',monospace;font-size:13px;color:var(--blue);letter-spacing:2px">GENLAYER</div>
+              <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--darker);margin-top:5px">IDEA VALIDATOR</div>
+            </div>
+          </div>
+          <div style="font-size:17px;color:var(--darker)">Submit your dApp idea. On-chain AI will judge it.</div>
+        </div>
+
+        <div class="tab-bar">
+          <div class="tab active" id="tab-login" onclick="switchTab('login')">Login</div>
+          <div class="tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</div>
+        </div>
+
+        <div class="inset" style="border-top:none">
+
+          <!-- LOGIN TAB -->
+          <div class="tab-content active" id="content-login">
+            <div style="height:12px"></div>
+            <span class="field-label">EMAIL ADDRESS:</span>
+            <input type="email" id="loginEmail" placeholder="you@example.com" style="margin-bottom:10px"/>
+            <span class="field-label">PASSWORD:</span>
+            <input type="password" id="loginPassword" placeholder="Enter your password" style="margin-bottom:4px"/>
+            <div class="msg-box" id="loginMsg"></div>
+            <div class="btn-row">
+              <button class="btn btn-primary" onclick="handleLogin()">LOGIN</button>
+            </div>
+
+          </div>
+
+          <!-- SIGNUP TAB -->
+          <div class="tab-content" id="content-signup">
+            <div style="height:12px"></div>
+            <div class="step-bar">
+              <div class="step-item active" id="step1-ind">1. Account</div>
+              <div class="step-item" id="step2-ind">2. Verify</div>
+            </div>
+            <div id="signup-step1">
+              <span class="field-label">EMAIL ADDRESS:</span>
+              <input type="email" id="signupEmail" placeholder="you@example.com" style="margin-bottom:10px"/>
+              <span class="field-label">PASSWORD:</span>
+              <input type="password" id="signupPassword" placeholder="Min 6 characters" style="margin-bottom:4px"/>
+              <div class="msg-box" id="signupMsg"></div>
+              <div class="btn-row">
+                <button class="btn btn-primary" onclick="handleSignup()">CREATE ACCOUNT</button>
+              </div>
+
+            </div>
+            <div id="signup-step2" style="display:none">
+              <div style="text-align:center;padding:10px 0;font-size:16px;line-height:1.6">
+                ✉️ Verification email sent!<br>Click the link in your inbox, then come back here.
+              </div>
+              <div class="msg-box" id="signupMsg2"></div>
+              <div class="btn-row" style="justify-content:center">
+                <button class="btn btn-primary" onclick="handleCheckVerified()">I HAVE VERIFIED MY EMAIL</button>
+                <button class="btn" onclick="handleResend()">Resend Email</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===================== APP VIEW ===================== -->
+<div id="app-view">
+
+<div class="overlay" id="overlay" onclick="closeShare()"></div>
+<div class="popup window" id="sharePopup">
+  <div class="titlebar"><span class="title-text">Share Result</span></div>
+  <div class="window-body">
+    <div class="inset" id="shareText" style="margin-bottom:12px;font-size:15px;min-height:80px;white-space:pre-wrap;"></div>
+    <div class="btn-row">
+      <button class="btn" onclick="copyShareText()">Copy Text</button>
+      <button class="btn" onclick="shareToTwitter()">Post to X / Twitter</button>
+      <button class="btn" onclick="closeShare()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="desktop">
+
+  <div class="window">
+    <div class="titlebar"><span class="title-text">GenLayer Idea Validator v1.0</span></div>
+    <div class="window-body">
+      <div class="header-inner">
+        <div class="header-title">GENLAYER IDEA VALIDATOR</div>
+        <div class="header-sub">Submit your dApp idea. On-chain AI will judge it.</div>
+        <div class="marquee-bar">
+          <span class="marquee-inner">POWERED BY GENLAYER INTELLIGENT CONTRACTS &nbsp;|&nbsp; AI READS THE LIVE WEB &nbsp;|&nbsp; OPTIMISTIC DEMOCRACY CONSENSUS &nbsp;|&nbsp; BUILD ON TESTNET &nbsp;|&nbsp; JOIN THE COMMUNITY &nbsp;|&nbsp;</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="window">
+    <div class="titlebar"><span class="title-text">Session</span></div>
+    <div class="window-body" style="padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span style="font-size:16px">Logged in as: <b id="userEmail">--</b></span>
+      <button class="btn" onclick="handleLogout()" style="font-size:15px;padding:4px 12px">Logout</button>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="window">
+      <div class="titlebar"><span class="title-text">Total Validated</span></div>
+      <div class="window-body"><div class="stat-inner">
+        <span class="stat-num" id="totalCount">0</span>
+        <span class="stat-lbl">Ideas Submitted</span>
+      </div></div>
+    </div>
+    <div class="window">
+      <div class="titlebar"><span class="title-text">Avg Score</span></div>
+      <div class="window-body"><div class="stat-inner">
+        <span class="stat-num" id="avgScore">--</span>
+        <span class="stat-lbl">Out of 10</span>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="two-col" style="margin-bottom:16px">
+    <div class="window">
+      <div class="titlebar"><span class="title-text">Submit Your Idea</span></div>
+      <div class="window-body">
+        <span class="field-label">DESCRIBE YOUR DAPP IDEA:</span>
+        <textarea id="ideaInput" rows="5" placeholder="Type your dApp idea here...&#10;&#10;E.g. A platform where devs submit GitHub repos and an AI reads the code to verify if they completed a bounty..."></textarea>
+        <div class="error-box" id="errorBox"></div>
+        <div id="loadingSection" style="display:none">
+          <div style="font-family:'Press Start 2P',monospace;font-size:7px;margin-top:10px" id="loadingMsg">Searching web...</div>
+          <div class="progress-wrap"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="validateBtn" onclick="handleValidate()">VALIDATE IDEA</button>
+          <button class="btn" onclick="clearInput()">Clear</button>
+        </div>
+      </div>
+    </div>
+    <div class="window">
+      <div class="titlebar"><span class="title-text">Idea Generator</span></div>
+      <div class="window-body">
+        <span class="field-label">NEED INSPIRATION?</span>
+        <div class="idea-display" id="ideaDisplay">Click Generate to get an idea...</div>
+        <div class="btn-row">
+          <button class="btn" onclick="generateRandomIdea()">Generate</button>
+          <button class="btn" onclick="useGeneratedIdea()">Use This Idea</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="window" id="resultsWindow" style="display:none">
+    <div class="titlebar"><span class="title-text">Validation Results</span></div>
+    <div class="window-body" id="resultsBody"></div>
+  </div>
+
+  <div class="two-col" style="margin-bottom:16px">
+    <div class="window">
+      <div class="titlebar"><span class="title-text">Community Ideas Leaderboard</span></div>
+      <div class="window-body">
+        <div class="inset" id="leaderboard" style="min-height:120px">
+          <div style="color:var(--dark);font-size:15px;text-align:center;padding:20px">No community ideas yet. Be the first!</div>
+        </div>
+      </div>
+    </div>
+    <div class="window">
+      <div class="titlebar"><span class="title-text">Validation History</span></div>
+      <div class="window-body">
+        <div class="inset history-list" id="historyList" style="min-height:120px">
+          <div style="color:var(--dark);font-size:15px;text-align:center;padding:20px">History will appear here.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="clearHistory()">Clear History</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ===================== SCRIPTS ===================== -->
+<script>
+// ============ SOUND ============
+let audioCtx = null
+function getCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx}
+function playTone(freq,dur,type='square',vol=0.08){try{const ctx=getCtx();const osc=ctx.createOscillator();const g=ctx.createGain();osc.connect(g);g.connect(ctx.destination);osc.type=type;osc.frequency.setValueAtTime(freq,ctx.currentTime);g.gain.setValueAtTime(vol,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);osc.start();osc.stop(ctx.currentTime+dur)}catch(e){}}
+function playClick(){playTone(700,0.05,'square',0.06)}
+function playSuccess(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>playTone(f,0.15,'triangle',0.1),i*80))}
+function playError(){[200,150].forEach((f,i)=>setTimeout(()=>playTone(f,0.2,'sawtooth',0.12),i*100))}
+function playNotify(){playTone(440,0.08,'sine',0.08);setTimeout(()=>playTone(660,0.08,'sine',0.08),120)}
+document.addEventListener('click',e=>{if(e.target.classList.contains('btn'))playClick()})
+
+// ============ TOAST ============
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800)}
+
+// ============ VIEW SWITCHER ============
+function showView(view){
+  document.getElementById('login-view').style.display = view==='login'?'block':'none'
+  document.getElementById('app-view').style.display = view==='app'?'block':'none'
+  if(view==='app') initApp()
+}
+
+// ============ LOGIN TAB SWITCH ============
+function switchTab(tab){
+  document.getElementById('tab-login').classList.toggle('active',tab==='login')
+  document.getElementById('tab-signup').classList.toggle('active',tab==='signup')
+  document.getElementById('content-login').classList.toggle('active',tab==='login')
+  document.getElementById('content-signup').classList.toggle('active',tab==='signup')
+}
+
+function showMsg(id,msg,type){
+  const el=document.getElementById(id)
+  if(!el)return
+  el.textContent=msg;el.className='msg-box visible '+type
+  if(type!=='success')setTimeout(()=>{el.className='msg-box'},4000)
+}
+
+// ============ APP STATE ============
+let currentUser = JSON.parse(localStorage.getItem('gl_user')||'null')
+const CONTRACT_ADDRESS = '0xae0fa093839B20f599A7994dfD1A22Bf612e426c'
+const COMMUNITY_KEY = 'gl_community_leaderboard'
+function getHistoryKey(){return `gl_history_${currentUser?currentUser.uid:'guest'}`}
+function getHistory(){try{return JSON.parse(localStorage.getItem(getHistoryKey())||'[]')}catch(e){return[]}}
+function saveHistory(h){try{localStorage.setItem(getHistoryKey(),JSON.stringify(h))}catch(e){}}
+function getCommunity(){try{return JSON.parse(localStorage.getItem(COMMUNITY_KEY)||'[]')}catch(e){return[]}}
+function saveCommunity(entry){
+  try{
+    const all=getCommunity()
+    all.unshift({idea:entry.idea,data:entry.data,user:currentUser?.email?.split('@')[0]||'builder',timestamp:Date.now()})
+    localStorage.setItem(COMMUNITY_KEY,JSON.stringify(all.slice(0,100)))
+  }catch(e){}
+}
+
+function handleLogout(){
+  localStorage.removeItem('gl_user')
+  currentUser=null
+  showView('login')
+}
+
+let appReady=false
+function initApp(){
+  currentUser=JSON.parse(localStorage.getItem('gl_user')||'null')
+  if(currentUser) document.getElementById('userEmail').textContent=currentUser.email
+  if(!appReady){
+    appReady=true
+    renderHistory();renderLeaderboard();updateStats();generateRandomIdea()
+  }
+}
+
+// ============ IDEA GENERATOR ============
+const IDEAS=["A platform where developers submit GitHub repos and an AI reads the code to verify bounty completion", "A DAO where an AI reads live news to summarize pros and cons of each proposal before voting", "An on-chain reputation system that reads a developer's GitHub and verifies real code contributions", "A freelance dispute resolver where AI reads the original brief and delivered work to judge fairly", "A prediction market that resolves automatically by reading news websites at the deadline", "An NFT that updates its metadata weekly based on live news about its subject", "A grant committee that scores builder proposals by reading their past work online", "A community fact-checker that reads web sources and reaches AI consensus on whether a claim is true", "A token launch vetting tool that reads a project's whitepaper, GitHub, and social media for a trust score", "A hackathon judging system where AI reads all submitted projects and ranks them by originality", "A Web3 job board where the contract verifies applicant skills by reading their GitHub portfolio", "A decentralized news aggregator where AI scores articles for bias and credibility from live sources", "A smart contract audit marketplace where AI reads code and flags vulnerabilities before human review", "An on-chain academic credential verifier that reads university websites to confirm degrees", "A DeFi insurance protocol where AI reads on-chain events and news to assess claim validity", "A decentralized review platform where AI detects fake reviews by cross-referencing multiple sources", "A Web3 event ticketing system where AI reads venue policies and flags scalping attempts", "An on-chain will executor that reads legal documents and distributes assets based on verified conditions", "A decentralized translation service where AI reads source documents and verifies translation quality", "A crypto tax assistant that reads transaction history and current tax laws to calculate obligations", "A DAO proposal summarizer that reads full proposals and generates plain-English summaries for voters", "An on-chain sports betting resolver that reads official sports websites for final scores", "A decentralized trademark checker that reads patent databases to flag potential infringements", "A Web3 scholarship fund that reads student applications and academic records to select recipients", "An AI-powered code review bounty where contributors get paid based on verified code quality", "A decentralized music royalty splitter that reads streaming data to distribute payments fairly", "An on-chain product review aggregator that reads e-commerce sites and surfaces authentic feedback", "A Web3 carbon credit verifier that reads satellite data and environmental reports for validation", "A decentralized fact-checking DAO that pays members for verified debunks of viral misinformation", "An AI oracle that reads weather APIs and triggers smart contracts for parametric crop insurance", "A token-gated community where AI reads member contributions to determine governance weight", "A decentralized talent agency where AI reads portfolios and matches creators with brand deals", "An on-chain peer review system for scientific papers where AI checks citations and methodology", "A Web3 real estate title verifier that reads property records to detect ownership disputes", "A decentralized podcast network where AI reads transcripts to distribute ad revenue by topic relevance", "An on-chain supply chain tracker where AI reads shipping documents and flags inconsistencies", "A DAO-governed fact database where AI reads Wikipedia edits and flags contested information", "A Web3 freelance escrow where AI reads deliverable specs and completed work before releasing funds", "An on-chain voting system where AI reads candidate records and surfaces relevant public information", "A decentralized insurance marketplace where AI reads policy fine print and flags unfair clauses", "A token curated registry where AI reads submissions and scores them for quality before listing", "An on-chain grant tracker that reads project updates and verifies milestone completion", "A Web3 influencer score where AI reads social profiles and verifies follower authenticity", "A decentralized legal aid platform where AI reads case descriptions and matches lawyers to clients", "An on-chain medication tracker where AI reads prescriptions and flags dangerous drug interactions", "A Web3 food safety monitor where AI reads restaurant inspection reports and triggers alerts", "A decentralized pricing oracle where AI reads multiple marketplaces and returns fair market value", "An on-chain diploma mill detector that reads certificate claims and cross-checks with institutions", "A Web3 whistleblower platform where AI reads submitted evidence and verifies it before publishing", "A decentralized watchdog DAO that reads government spending reports and flags anomalies", "An on-chain book club where AI reads summaries and generates discussion questions for members", "A Web3 crowdfunding platform where AI reads project plans and predicts delivery likelihood", "A decentralized fitness challenge where AI reads wearable data to verify workout completion", "An on-chain art authentication service that reads provenance records and flags forgeries", "A Web3 charity tracker that reads NGO financial reports and scores transparency for donors", "A decentralized job reference checker that reads LinkedIn and GitHub to verify work history", "An on-chain content licensing platform where AI reads usage rights and automates royalty payments", "A Web3 housing rental platform where AI reads tenant reviews and landlord records for trust scores", "A decentralized sports scouting tool where AI reads player stats and match reports for recruitment", "An on-chain patent filing assistant that reads prior art databases to assess novelty", "A Web3 mental health support DAO where AI reads crisis signals and routes users to resources", "A decentralized election monitor that reads official results and flags statistical anomalies", "An on-chain medical research platform where AI reads clinical trials and surfaces key findings", "A Web3 event discovery tool where AI reads local listings and recommends based on preferences", "A decentralized tutoring marketplace where AI reads student performance data to match tutors", "An on-chain social impact bond where AI reads outcome reports to trigger investor payments", "A Web3 news bias detector that reads articles across outlets and scores political leaning", "A decentralized language learning app where AI reads user writing and provides certified feedback", "An on-chain fashion authentication service that reads brand databases to detect counterfeit goods", "A Web3 dating app where AI reads profile authenticity signals and penalizes fake accounts", "A decentralized energy trading platform where AI reads smart meter data to optimize peer trades", "An on-chain immigration document verifier that reads government databases to validate applications", "A Web3 food traceability system where AI reads farm records and flags supply chain gaps", "A decentralized homework help DAO where AI reads student questions and verifies answer quality", "An on-chain developer skills assessment that reads coding challenge submissions and scores them", "A Web3 price comparison oracle that reads multiple DEX prices and returns the best swap route", "A decentralized product recall system where AI reads safety reports and notifies token holders", "An on-chain startup due diligence tool that reads filings and news to generate risk reports", "A Web3 gaming achievement verifier that reads game APIs to award tokens for real accomplishments", "A decentralized will registry where AI reads legal documents and validates executor instructions", "An on-chain sports injury tracker that reads medical reports and adjusts fantasy sport scores", "A Web3 property rental arbitration service where AI reads lease agreements and dispute claims", "A decentralized API marketplace where AI reads documentation quality and scores reliability", "An on-chain KYC alternative that reads public records to verify identity without storing data", "A Web3 podcast transcription service where AI reads audio content and distributes creator royalties", "A decentralized bug bounty platform where AI reads vulnerability reports and validates severity", "An on-chain municipal budget tracker where AI reads public records and flags misallocations", "A Web3 open source contributor rewards system that reads commit history for fair compensation", "A decentralized brand safety tool where AI reads ad placements and flags inappropriate content", "An on-chain scholarship verification service that reads academic transcripts to prevent fraud", "A Web3 ESG scoring platform where AI reads company reports and rates sustainability claims", "A decentralized legal contract analyzer that reads agreements and flags one-sided clauses", "An on-chain meme stock predictor that reads Reddit and social media sentiment for signals", "A Web3 health insurance claims processor where AI reads medical bills and flags overcharges", "A decentralized academic plagiarism detector that reads papers and cross-checks published work", "An on-chain startup equity tracker that reads cap table documents and validates dilution events", "A Web3 podcast fact-checker that reads episode transcripts and verifies cited statistics", "A decentralized local government monitor that reads council meeting minutes and surfaces decisions", "An on-chain product warranty manager that reads purchase receipts and automates claim processing", "A Web3 influencer campaign verifier that reads engagement data and validates delivery of paid posts", "A decentralized credit scoring alternative that reads on-chain payment history for underbanked users", "An on-chain sports arbitration system that reads rulebooks and match footage descriptions for rulings", "A Web3 AI model marketplace where buyers can verify model performance by reading benchmark reports"]
+let generatedIdea='', ideaPool=[], usedIdeas=new Set()
+function generateRandomIdea(){
+  // Filter out already used ideas
+  let remaining = IDEAS.filter((_,i) => !usedIdeas.has(i))
+  // If all used, show message
+  if(remaining.length === 0){
+    document.getElementById('ideaDisplay').textContent = 'You have seen all ' + IDEAS.length + ' ideas! Refresh to start over.'
+    return
+  }
+  // Pick random from remaining
+  const availableIndices = IDEAS.map((_,i)=>i).filter(i=>!usedIdeas.has(i))
+  const pick = availableIndices[Math.floor(Math.random()*availableIndices.length)]
+  usedIdeas.add(pick)
+  generatedIdea = IDEAS[pick]
+  const box=document.getElementById('ideaDisplay')
+  box.textContent='';let i=0
+  const idea=generatedIdea
+  const iv=setInterval(()=>{if(i<idea.length){box.textContent=idea.substring(0,++i)}else clearInterval(iv)},16)
+}
+function useGeneratedIdea(){if(generatedIdea){document.getElementById('ideaInput').value=generatedIdea;showToast('Idea loaded!')}}
+function clearInput(){document.getElementById('ideaInput').value=''}
+
+// ============ VALIDATION ============
+const LOADING_STEPS=['Searching web for similar projects','Reading GenLayer docs','Running LLM analysis','Validators reaching consensus','Finalizing result']
+let loadStep=0,loadTimer=null
+function startLoader(){loadStep=0;document.getElementById('loadingSection').style.display='block';document.getElementById('progressFill').style.width='0%';document.getElementById('loadingMsg').textContent=LOADING_STEPS[0];loadTimer=setInterval(()=>{loadStep=Math.min(loadStep+1,LOADING_STEPS.length-1);document.getElementById('loadingMsg').textContent=LOADING_STEPS[loadStep];document.getElementById('progressFill').style.width=`${(loadStep+1)/LOADING_STEPS.length*100}%`},14000)}
+function stopLoader(){clearInterval(loadTimer);document.getElementById('progressFill').style.width='100%';setTimeout(()=>document.getElementById('loadingSection').style.display='none',400)}
+
+async function handleValidate(){
+  const idea=document.getElementById('ideaInput').value.trim()
+  if(!idea||idea.length<20){document.getElementById('errorBox').textContent='Please describe your idea in more detail.';document.getElementById('errorBox').classList.add('visible');setTimeout(()=>document.getElementById('errorBox').classList.remove('visible'),3000);return}
+  document.getElementById('validateBtn').disabled=true
+  document.getElementById('resultsWindow').style.display='none'
+  document.getElementById('errorBox').classList.remove('visible')
+  startLoader()
+  try{
+    const data=await simulateValidation(idea)
+    stopLoader()
+    const history=getHistory()
+    history.unshift({idea:idea.substring(0,80),data,timestamp:Date.now()})
+    saveHistory(history.slice(0,50))
+    saveCommunity({idea:idea.substring(0,80),data})
+    renderResults(data,idea);renderHistory();renderLeaderboard();updateStats()
+    playSuccess();showToast('Validation complete!')
+    document.getElementById('resultsWindow').scrollIntoView({behavior:'smooth'})
+  }catch(err){stopLoader();playError();document.getElementById('errorBox').textContent='Error: '+err.message;document.getElementById('errorBox').classList.add('visible')}
+  document.getElementById('validateBtn').disabled=false
+}
+
+async function simulateValidation(idea){
+  await new Promise(r=>setTimeout(r,2500))
+  const lower=idea.toLowerCase()
+  const hasWeb=/read|web|news|verif|check|github|scrape|fetch/.test(lower)
+  const hasJudge=/judge|fair|score|rank|dispute|quality|best/.test(lower)
+  const isOriginal=!/uniswap|opensea|aave|compound/.test(lower)
+  const orig=isOriginal?6+Math.floor(Math.random()*4):3+Math.floor(Math.random()*3)
+  const fit=(hasWeb||hasJudge)?8+Math.floor(Math.random()*2):4+Math.floor(Math.random()*3)
+  const feas=6+Math.floor(Math.random()*3)
+  const overall=Math.round((orig+fit+feas)/3)
+  const verdict=overall>=8?'GO BUILD IT':overall>=6?'NEEDS WORK':isOriginal?'NOT IDEAL FOR GENLAYER':'ALREADY EXISTS'
+  return{idea_summary:idea.substring(0,100),originality_score:orig,originality_verdict:isOriginal?"Relatively original — no identical implementations found on major platforms.":"Similar projects exist. You need a strong differentiator.",genlayer_fit_score:fit,genlayer_fit_reason:(hasWeb||hasJudge)?"Strongly leverages GenLayer's powers — web reading and AI judgment are core to this idea.":"Could run on any chain. Add web-reading or AI judgment to make it truly GenLayer-native.",feasibility_score:feas,feasibility_reason:"Achievable in a week using GenLayer Studio. Core logic maps to 1-2 contract functions.",overall_score:overall,verdict,genlayer_native_twist:"Add a function that reads live web sources to automatically verify claims — removing any need for a trusted human intermediary.",similar_projects:isOriginal?[]:["Similar Project A","Competitor B"],one_line_pitch:`The first on-chain ${idea.split(' ').slice(0,4).join(' ').toLowerCase()} powered by AI validators that read the live web.`}
+}
+
+// ============ RENDER ============
+let currentResult=null,currentIdea=''
+function verdictClass(v){return v==='GO BUILD IT'?'verdict-go':v==='NEEDS WORK'?'verdict-needs':v==='ALREADY EXISTS'?'verdict-exists':'verdict-notideal'}
+function scoreColor(s){return s>=8?'#00aa00':s>=5?'#aaaa00':'#aa0000'}
+function renderResults(data,idea){
+  currentResult=data;currentIdea=idea
+  document.getElementById('resultsWindow').style.display='block'
+  const similar=(data.similar_projects||[]).map(p=>`<span class="tag">${p}</span>`).join('')||'<span style="color:#00aa00">None found</span>'
+  document.getElementById('resultsBody').innerHTML=`<div class="verdict-badge ${verdictClass(data.verdict)}">${data.verdict}</div><div class="inset" style="margin-bottom:12px;font-size:16px;line-height:1.5">${data.one_line_pitch}</div><span class="field-label">SCORES:</span>${[['Originality',data.originality_score],['GenLayer Fit',data.genlayer_fit_score],['Feasibility',data.feasibility_score],['Overall',data.overall_score]].map(([l,s])=>`<div class="score-row"><span class="score-lbl">${l}</span><div class="score-meter"><div class="score-fill" style="width:${s*10}%;background:${scoreColor(s)}"></div></div><span class="score-val">${s}/10</span></div>`).join('')}<div class="divider"></div><span class="field-label">ANALYSIS:</span><div class="raised" style="margin-bottom:8px;font-size:16px;line-height:1.5"><b>Originality:</b> ${data.originality_verdict}</div><div class="raised" style="margin-bottom:8px;font-size:16px;line-height:1.5"><b>GenLayer Fit:</b> ${data.genlayer_fit_reason}</div><div class="raised" style="margin-bottom:8px;font-size:16px;line-height:1.5"><b>Feasibility:</b> ${data.feasibility_reason}</div><div class="inset" style="margin-bottom:8px;font-size:16px;line-height:1.5;border-left:4px solid #00aa00"><b>Make it more GenLayer-native:</b> ${data.genlayer_native_twist}</div><span class="field-label">SIMILAR PROJECTS:</span><div style="margin-bottom:12px">${similar}</div><div class="btn-row"><button class="btn" onclick="openShare()">Share Result</button><button class="btn" onclick="copyResult()">Copy JSON</button></div>`
+}
+function renderHistory(){const h=getHistory(),c=document.getElementById('historyList');if(!h.length){c.innerHTML='<div style="color:var(--dark);font-size:15px;text-align:center;padding:20px">No history yet.</div>';return}c.innerHTML=h.map((item,i)=>`<div class="history-item" onclick="viewItem(${i})"><span class="history-verdict" style="color:${item.data.verdict==='GO BUILD IT'?'#008800':item.data.verdict==='NEEDS WORK'?'#888800':'#880000'}">${item.data.verdict}</span>${item.idea}<div style="font-size:13px;color:var(--dark);margin-top:3px">${new Date(item.timestamp).toLocaleDateString()} | Score: ${item.data.overall_score}/10</div></div>`).join('')}
+function viewItem(i){const item=getHistory()[i];if(item){renderResults(item.data,item.idea);document.getElementById('resultsWindow').scrollIntoView({behavior:'smooth'})}}
+function renderLeaderboard(){const sorted=[...getCommunity()].sort((a,b)=>b.data.overall_score-a.data.overall_score).slice(0,10);const c=document.getElementById('leaderboard');if(!sorted.length){c.innerHTML='<div style="color:var(--dark);font-size:15px;text-align:center;padding:20px">No community ideas yet. Be the first!</div>';return}c.innerHTML=sorted.map((item,i)=>`<div class="lb-row" style="animation-delay:${i*0.08}s"><span class="lb-rank">${i+1}.</span><span style="flex:1;font-size:14px">${item.idea.substring(0,35)}...</span><span style="font-size:12px;color:var(--darker);margin-right:6px">${item.user||'builder'}</span><span class="lb-score">${item.data.overall_score}/10</span></div>`).join('')}
+function updateStats(){const h=getHistory();document.getElementById('totalCount').textContent=h.length;document.getElementById('avgScore').textContent=h.length?(h.reduce((s,x)=>s+x.data.overall_score,0)/h.length).toFixed(1):'--'}
+function clearHistory(){if(confirm('Clear your personal history?')){localStorage.removeItem(getHistoryKey());renderHistory();updateStats();showToast('History cleared')}}
+
+// ============ SHARE ============
+function openShare(){if(!currentResult)return;const text=`GenLayer Idea Validator\n\nIdea: ${currentIdea.substring(0,80)}\nVerdict: ${currentResult.verdict}\nOverall: ${currentResult.overall_score}/10\n\n${currentResult.genlayer_native_twist}`;document.getElementById('shareText').textContent=text;document.getElementById('sharePopup').classList.add('visible');document.getElementById('overlay').classList.add('visible')}
+function closeShare(){document.getElementById('sharePopup').classList.remove('visible');document.getElementById('overlay').classList.remove('visible')}
+function copyShareText(){navigator.clipboard.writeText(document.getElementById('shareText').textContent);showToast('Copied!');playNotify()}
+function shareToTwitter(){const text=encodeURIComponent(`I just validated my dApp idea on @GenLayer!\nVerdict: ${currentResult.verdict} (${currentResult.overall_score}/10)`);window.open(`https://twitter.com/intent/tweet?text=${text}`,'_blank')}
+function copyResult(){if(!currentResult)return;navigator.clipboard.writeText(JSON.stringify(currentResult,null,2));showToast('JSON copied!');playNotify()}
+
+// ============ INIT: check auth ============
+if(currentUser){showView('app')}else{showView('login')}
+</script>
+
+<script type="module">
+// ============ FIREBASE AUTH ============
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'
+
+const firebaseConfig = {
+  apiKey: "AIzaSyATxDZoJRZwbWUyFzOZe3RJD3n3Cx1gRi8",
+  authDomain: "genlayer-validator.firebaseapp.com",
+  projectId: "genlayer-validator",
+  storageBucket: "genlayer-validator.firebasestorage.app",
+  messagingSenderId: "1044114518106",
+  appId: "1:1044114518106:web:9e9f7d925e3fdc6d8c2863"
+}
+
+const app = initializeApp(firebaseConfig)
+const auth = getAuth(app)
+const provider = new GoogleAuthProvider()
+
+function saveUser(u){ localStorage.setItem('gl_user', JSON.stringify({uid:u.uid, email:u.email})) }
+
+window.handleLogin = async function(){
+  const email = document.getElementById('loginEmail').value.trim()
+  const password = document.getElementById('loginPassword').value
+  if(!email||!password){showMsg('loginMsg','Please fill in all fields','error');return}
+  try{
+    const cred = await signInWithEmailAndPassword(auth, email, password)
+    saveUser(cred.user)
+    playSuccess()
+    showMsg('loginMsg','Welcome back!','success')
+    setTimeout(()=>showView('app'), 800)
+  }catch(err){
+    playError()
+    let errMsg = err.message
+    if(err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') errMsg = 'Incorrect email or password.'
+    else if(err.code === 'auth/invalid-email') errMsg = 'Invalid email address.'
+    else if(err.code === 'auth/too-many-requests') errMsg = 'Too many attempts. Please try again later.'
+    showMsg('loginMsg', errMsg, 'error')
+  }
+}
+
+window.handleSignup = async function(){
+  const email = document.getElementById('signupEmail').value.trim()
+  const password = document.getElementById('signupPassword').value
+  if(!email||!password){showMsg('signupMsg','Please fill in all fields','error');return}
+  if(password.length<6){showMsg('signupMsg','Password must be at least 6 characters','error');return}
+  try{
+    const cred = await createUserWithEmailAndPassword(auth, email, password)
+    await sendEmailVerification(cred.user)
+    playNotify()
+    document.getElementById('signup-step1').style.display='none'
+    document.getElementById('signup-step2').style.display='block'
+    document.getElementById('step1-ind').className='step-item done'
+    document.getElementById('step2-ind').className='step-item active'
+  }catch(err){
+    playError()
+    let errMsg = err.message
+    if(err.code === 'auth/email-already-in-use') errMsg = 'An account with this email already exists. Please login instead.'
+    else if(err.code === 'auth/weak-password') errMsg = 'Password is too weak. Use at least 6 characters.'
+    else if(err.code === 'auth/invalid-email') errMsg = 'Invalid email address.'
+    showMsg('signupMsg', errMsg, 'error')
+  }
+}
+
+window.handleCheckVerified = async function(){
+  const btn = document.querySelector('#signup-step2 .btn-primary')
+  btn.textContent='Checking...';btn.disabled=true
+  try{
+    await auth.currentUser.reload()
+    if(auth.currentUser.emailVerified){
+      saveUser(auth.currentUser)
+      playSuccess()
+      showMsg('signupMsg2','Verified! Loading app...','success')
+      setTimeout(()=>showView('app'), 1200)
+    }else{
+      playError()
+      showMsg('signupMsg2','Not verified yet. Check your email inbox.','error')
+      btn.textContent='I HAVE VERIFIED MY EMAIL';btn.disabled=false
+    }
+  }catch(err){
+    playError()
+    showMsg('signupMsg2','Error: '+err.message,'error')
+    btn.textContent='I HAVE VERIFIED MY EMAIL';btn.disabled=false
+  }
+}
+
+window.handleResend = async function(){
+  try{await sendEmailVerification(auth.currentUser);showMsg('signupMsg2','Email resent!','info');playNotify()}
+  catch(err){showMsg('signupMsg2','Could not resend: '+err.message,'error')}
+}
+
+window.handleGoogleLogin = async function(){
+  try{
+    const cred = await signInWithPopup(auth, provider)
+    saveUser(cred.user)
+    playSuccess()
+    setTimeout(()=>showView('app'), 800)
+  }catch(err){
+    playError()
+    showMsg('loginMsg', err.message.replace('Firebase:','').trim(), 'error')
+  }
+}
+</script>
+</body>
+</html>
