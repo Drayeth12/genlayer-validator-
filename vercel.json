@@ -1,9 +1,0 @@
-{
-  "cleanUrls": true,
-  "rewrites": [
-    {
-      "source": "/genlayer-validator-app",
-      "destination": "/genlayer-validator-app.html"
-    }
-  ]
-}
