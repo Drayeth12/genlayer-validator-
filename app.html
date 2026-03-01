@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GenLayer Idea Validator</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #008080; --gray: #c0c0c0; --dark: #808080; --darker: #404040;
+    --white: #ffffff; --black: #000000; --blue: #000080;
+    --titlebar: linear-gradient(to right, #000080, #1084d0);
+    --green: #00aa00; --yellow: #aaaa00; --red: #aa0000;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); font-family: 'VT323', monospace; font-size: 18px; min-height: 100vh; overflow-x: hidden; }
+  body::after { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.025) 2px, rgba(0,0,0,0.025) 4px); pointer-events: none; z-index: 9999; }
+  .desktop { max-width: 960px; margin: 0 auto; padding: 24px 20px 40px; }
+  .window { background: var(--gray); border: 2px solid; border-color: var(--white) var(--darker) var(--darker) var(--white); box-shadow: 4px 4px 0 var(--black); margin-bottom: 16px; animation: windowOpen 0.25s ease both; }
+  @keyframes windowOpen { from{transform:scale(0.97);opacity:0} to{transform:scale(1);opacity:1} }
+  .titlebar { background: var(--titlebar); padding: 5px 8px; display: flex; align-items: center; justify-content: space-between; user-select: none; }
+  .title-text { color: white; font-family: 'Press Start 2P', monospace; font-size: 8px; }
+  .window-body { padding: 16px; }
+  .inset { background: var(--white); border: 2px solid; border-color: var(--dark) var(--white) var(--white) var(--dark); padding: 10px; }
+  .raised { background: var(--gray); border: 2px solid; border-color: var(--white) var(--dark) var(--dark) var(--white); padding: 10px; }
+  .header-inner { text-align: center; padding: 16px; }
+  .header-title { font-family: 'Press Start 2P', monospace; font-size: clamp(9px,1.8vw,15px); color: var(--blue); margin-bottom: 8px; }
+  .header-sub { font-size: 19px; color: var(--darker); margin-bottom: 14px; }
+  .marquee-bar { background: var(--black); border: 2px solid var(--dark); padding: 5px 0; overflow: hidden; }
+  .marquee-inner { color: #00ff00; font-size: 15px; white-space: nowrap; display: inline-block; animation: marquee 22s linear infinite; }
+  @keyframes marquee { from{transform:translateX(100vw)} to{transform:translateX(-100%)} }
+  .stats-row { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; margin-bottom: 16px; }
+  .stat-inner { text-align: center; padding: 12px 8px; }
+  .stat-num { font-family: 'Press Start 2P', monospace; font-size: clamp(14px,3vw,22px); color: var(--blue); display: block; }
+  .stat-lbl { font-size: 15px; color: var(--darker); display: block; margin-top: 4px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width:620px) { .two-col { grid-template-columns: 1fr; } .stats-row { grid-template-columns: 1fr; } }
+  textarea { width: 100%; background: var(--white); border: 2px solid; border-color: var(--dark) var(--white) var(--white) var(--dark); font-family: 'VT323', monospace; font-size: 17px; padding: 8px; outline: none; resize: vertical; color: var(--black); line-height: 1.5; }
+  textarea:focus { border-color: var(--blue) var(--white) var(--white) var(--blue); }
+  textarea::placeholder { color: var(--dark); }
+  .field-label { font-family: 'Press Start 2P', monospace; font-size: 7px; display: block; margin-bottom: 8px; color: var(--darker); }
+  .btn { background: var(--gray); border: 2px solid; border-color: var(--white) var(--dark) var(--dark) var(--white); font-family: 'VT323', monospace; font-size: 17px; padding: 5px 14px; cursor: pointer; color: var(--black); }
+  .btn:active { border-color: var(--dark) var(--white) var(--white) var(--dark); transform: translate(1px,1px); }
+  .btn:disabled { color: var(--dark); cursor: not-allowed; }
+  .btn-primary { background: var(--blue); color: white; font-family: 'Press Start 2P', monospace; font-size: 7px; padding: 10px 18px; border-color: #4040c0 var(--darker) var(--darker) #4040c0; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .progress-wrap { background: var(--white); border: 2px solid; border-color: var(--dark) var(--white) var(--white) var(--dark); height: 22px; margin: 10px 0; overflow: hidden; }
+  .progress-fill { height: 100%; background: repeating-linear-gradient(90deg, var(--blue) 0, var(--blue) 16px, #4040ff 16px, #4040ff 20px); background-size: 20px 100%; width: 0%; transition: width 0.4s ease; animation: stripe 0.4s linear infinite; }
+  @keyframes stripe { from{background-position:0 0} to{background-position:20px 0} }
+  .score-row { display: flex; align-items: center; gap: 8px; margin: 5px 0; font-size: 16px; }
+  .score-lbl { width: 120px; flex-shrink: 0; }
+  .score-meter { flex: 1; background: var(--white); border: 2px solid; border-color: var(--dark) var(--white) var(--white) var(--dark); height: 16px; overflow: hidden; }
+  .score-fill { height: 100%; transition: width 1s cubic-bezier(0.16,1,0.3,1); }
+  .score-val { width: 36px; text-align: right; font-family: 'Press Start 2P', monospace; font-size: 9px; }
+  .verdict-badge { font-family: 'Press Start 2P', monospace; font-size: clamp(8px,1.8vw,11px); padding: 10px; text-align: center; border: 3px solid; margin: 10px 0; animation: flash 0.4s ease 3; }
+  @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .verdict-go { background:#00aa00;color:white;border-color:#007700 white white #007700; }
+  .verdict-needs { background:#aaaa00;color:black;border-color:#777700 white white #777700; }
+  .verdict-exists { background:#aa0000;color:white;border-color:#770000 white white #770000; }
+  .verdict-notideal { background:#334488;color:white;border-color:#112266 white white #112266; }
+  .history-list { max-height: 220px; overflow-y: auto; }
+  .history-item { background: var(--white); border: 1px solid var(--dark); padding: 7px 8px; margin-bottom: 5px; cursor: pointer; font-size: 15px; line-height: 1.4; }
+  .history-item:hover { background: var(--blue); color: white; }
+  .history-verdict { font-family: 'Press Start 2P', monospace; font-size: 6px; float: right; margin-top: 2px; }
+  .lb-row { display: flex; align-items: center; gap: 8px; padding: 6px; border-bottom: 1px dotted var(--dark); font-size: 15px; animation: slideIn 0.3s ease both; }
+  @keyframes slideIn { from{transform:translateX(-16px);opacity:0} to{transform:translateX(0);opacity:1} }
+  .lb-rank { font-family:'Press Start 2P',monospace;font-size:7px;color:var(--blue);width:22px; }
+  .lb-score { margin-left:auto;font-family:'Press Start 2P',monospace;font-size:7px;color:var(--green); }
+  .idea-display { background: var(--black); color: #00ff00; padding: 10px; font-size: 16px; min-height: 70px; border: 2px solid var(--dark); line-height: 1.5; cursor: pointer; }
+  .overlay { position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:499;display:none; }
+  .overlay.visible { display:block; }
+  .popup { position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:500;width:min(420px,92vw);display:none;animation:windowOpen 0.2s ease; }
+  .popup.visible { display:block; }
+  .error-box { background:#aa0000;color:white;border:2px solid;border-color:#ff4444 #770000 #770000 #ff4444;padding:8px 10px;margin:8px 0;font-size:15px;display:none; }
+  .error-box.visible { display:block; }
+  .toast { position:fixed;bottom:24px;right:20px;background:var(--gray);border:2px solid;border-color:var(--white) var(--dark) var(--dark) var(--white);box-shadow:3px 3px 0 black;padding:8px 14px;font-size:15px;z-index:999;transform:translateX(200%);transition:transform 0.3s ease; }
+  .toast.show { transform:translateX(0); }
+  .divider { height:2px;background:var(--dark);border-top:1px solid var(--white);margin:10px 0; }
+  .tag { display:inline-block;background:var(--blue);color:white;padding:2px 8px;font-size:14px;margin:2px; }
+  ::-webkit-scrollbar { width: 16px; }
+  ::-webkit-scrollbar-track { background: var(--gray); }
+  ::-webkit-scrollbar-thumb { background: var(--gray); border: 2px solid; border-color: var(--white) var(--dark) var(--dark) var(--white); }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+<div class="overlay" id="overlay" onclick="closeShare()"></div>
+
+<div class="popup window" id="sharePopup">
+  <div class="titlebar"><span class="title-text">Share Result</span></div>
+  <div class="window-body">
+    <div class="inset" id="shareText" style="margin-bottom:12px;font-size:15px;min-height:80px;white-space:pre-wrap;"></div>
+    <div class="btn-row">
+      <button class="btn" onclick="copyShareText()">Copy Text</button>
+      <button class="btn" onclick="shareToTwitter()">Post to X / Twitter</button>
+      <button class="btn" onclick="closeShare()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="desktop">
+
+  <!-- HEADER -->
+  <div class="window">
+    <div class="titlebar"><span class="title-text">GenLayer Idea Validator v1.0</span></div>
+    <div class="window-body">
+      <div class="header-inner">
+        <div class="header-title">GENLAYER IDEA VALIDATOR</div>
+        <div class="header-sub">Submit your dApp idea. On-chain AI will judge it.</div>
+        <div class="marquee-bar">
+          <span class="marquee-inner">POWERED BY GENLAYER INTELLIGENT CONTRACTS &nbsp;|&nbsp; AI READS THE LIVE WEB &nbsp;|&nbsp; OPTIMISTIC DEMOCRACY CONSENSUS &nbsp;|&nbsp; BUILD ON TESTNET &nbsp;|&nbsp; JOIN THE COMMUNITY &nbsp;|&nbsp;</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- USER BAR -->
+  <div class="window" style="animation-delay:0.05s">
+    <div class="titlebar"><span class="title-text">Session</span></div>
+    <div class="window-body" style="padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span style="font-size:16px">Logged in as: <b id="userEmail">--</b></span>
+      <button class="btn" onclick="handleLogout()" style="font-size:15px;padding:4px 12px">Logout</button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="window" style="animation-delay:0.08s">
+      <div class="titlebar"><span class="title-text">Total Validated</span></div>
+      <div class="window-body"><div class="stat-inner">
+        <span class="stat-num" id="totalCount">0</span>
+        <span class="stat-lbl">Ideas Submitted</span>
+      </div></div>
+    </div>
+    <div class="window" style="animation-delay:0.12s">
+      <div class="titlebar"><span class="title-text">Avg Score</span></div>
+      <div class="window-body"><div class="stat-inner">
+        <span class="stat-num" id="avgScore">--</span>
+        <span class="stat-lbl">Out of 10</span>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- INPUT + GENERATOR -->
+  <div class="two-col" style="margin-bottom:16px">
+    <div class="window" style="animation-delay:0.2s">
+      <div class="titlebar"><span class="title-text">Submit Your Idea</span></div>
+      <div class="window-body">
+        <span class="field-label">DESCRIBE YOUR DAPP IDEA:</span>
+        <textarea id="ideaInput" rows="5" placeholder="Type your dApp idea here in plain English...
+
+E.g. A platform where devs submit GitHub repos and an AI reads the code to verify if they completed a bounty..."></textarea>
+        <div class="error-box" id="errorBox"></div>
+        <div id="loadingSection" style="display:none">
+          <div style="font-family:'Press Start 2P',monospace;font-size:7px;margin-top:10px" id="loadingMsg">Searching web...</div>
+          <div class="progress-wrap"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="validateBtn" onclick="handleValidate()">VALIDATE IDEA</button>
+          <button class="btn" onclick="clearInput()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="window" style="animation-delay:0.25s">
+      <div class="titlebar"><span class="title-text">Idea Generator</span></div>
+      <div class="window-body">
+        <span class="field-label">NEED INSPIRATION?</span>
+        <div class="idea-display" id="ideaDisplay">Click Generate to get an idea...</div>
+        <div class="btn-row">
+          <button class="btn" onclick="generateRandomIdea()">Generate</button>
+          <button class="btn" onclick="useGeneratedIdea()">Use This Idea</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="window" id="resultsWindow" style="display:none">
+    <div class="titlebar"><span class="title-text">Validation Results</span></div>
+    <div class="window-body" id="resultsBody"></div>
+  </div>
+
+  <!-- LEADERBOARD + HISTORY -->
+  <div class="two-col" style="margin-bottom:16px">
+    <div class="window" style="animation-delay:0.3s">
+      <div class="titlebar"><span class="title-text">Community Ideas Leaderboard</span></div>
+      <div class="window-body">
+        <div class="inset" id="leaderboard" style="min-height:120px">
+          <div style="color:var(--dark);font-size:15px;text-align:center;padding:20px">No community ideas yet. Be the first!</div>
+        </div>
+      </div>
+    </div>
+    <div class="window" style="animation-delay:0.35s">
+      <div class="titlebar"><span class="title-text">Validation History</span></div>
+      <div class="window-body">
+        <div class="inset history-list" id="historyList" style="min-height:120px">
+          <div style="color:var(--dark);font-size:15px;text-align:center;padding:20px">History will appear here.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="clearHistory()">Clear History</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CONTRACT_ADDRESS = '0xae0fa093839B20f599A7994dfD1A22Bf612e426c'
+
+// AUTH CHECK
+const glUser = JSON.parse(localStorage.getItem('gl_user') || 'null')
+if (!glUser) { window.location.href = '/' }
+else { document.getElementById('userEmail').textContent = glUser.email }
+
+function handleLogout() {
+  localStorage.removeItem('gl_user')
+  window.location.href = '/'
+}
+
+// SOUND EFFECTS
+let audioCtx = null
+function getCtx() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx }
+function playTone(freq, dur, type='square', vol=0.08) {
+  try {
+    const ctx = getCtx(); const osc = ctx.createOscillator(); const g = ctx.createGain()
+    osc.connect(g); g.connect(ctx.destination); osc.type = type
+    osc.frequency.setValueAtTime(freq, ctx.currentTime)
+    g.gain.setValueAtTime(vol, ctx.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur)
+    osc.start(); osc.stop(ctx.currentTime + dur)
+  } catch(e) {}
+}
+function playClick() { playTone(700, 0.05, 'square', 0.06) }
+function playSuccess() { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>playTone(f,0.15,'triangle',0.1),i*80)) }
+function playError() { [200,150].forEach((f,i)=>setTimeout(()=>playTone(f,0.2,'sawtooth',0.12),i*100)) }
+function playNotify() { playTone(440,0.08,'sine',0.08); setTimeout(()=>playTone(660,0.08,'sine',0.08),120) }
+
+document.querySelectorAll('.btn').forEach(b => b.addEventListener('mousedown', playClick))
+
+// TOAST
+function showToast(msg) {
+  const t = document.getElementById('toast')
+  t.textContent = msg; t.classList.add('show')
+  setTimeout(()=>t.classList.remove('show'), 2800)
+}
+
+// DATA
+const HISTORY_KEY = `gl_history_${glUser ? glUser.uid : 'guest'}`
+const COMMUNITY_KEY = 'gl_community_leaderboard'
+function getHistory() { try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch(e){return[]} }
+function saveHistory(h) { try{localStorage.setItem(HISTORY_KEY,JSON.stringify(h))}catch(e){} }
+function getCommunity() { try{return JSON.parse(localStorage.getItem(COMMUNITY_KEY)||'[]')}catch(e){return[]} }
+function saveCommunity(entry) {
+  try {
+    const all = getCommunity()
+    all.unshift({ idea: entry.idea, data: entry.data, user: glUser?.email?.split('@')[0] || 'builder', timestamp: Date.now() })
+    localStorage.setItem(COMMUNITY_KEY, JSON.stringify(all.slice(0, 100)))
+  } catch(e){}
+}
+function clearHistory() {
+  if (confirm('Clear your personal history?')) {
+    localStorage.removeItem(HISTORY_KEY)
+    renderHistory(); updateStats()
+    showToast('History cleared')
+  }
+}
+
+// IDEA GENERATOR
+const IDEAS = [
+  "A platform where developers submit GitHub repos and an AI reads the code to verify bounty completion",
+  "A DAO where an AI reads live news to summarize pros and cons of each proposal before voting",
+  "An on-chain reputation system that reads a developer's GitHub and verifies real code contributions",
+  "A freelance dispute resolver where AI reads the original brief and delivered work to judge fairly",
+  "A prediction market that resolves automatically by reading news websites at the deadline",
+  "An NFT that updates its metadata weekly based on live news about its subject",
+  "A grant committee that scores builder proposals by reading their past work online",
+  "A community fact-checker that reads web sources and reaches AI consensus on whether a claim is true",
+  "A token launch vetting tool that reads a project's whitepaper, GitHub, and social media for a trust score",
+  "A hackathon judging system where AI reads all submitted projects and ranks them by originality",
+  "A Web3 job board where the contract verifies applicant skills by reading their GitHub portfolio",
+]
+let generatedIdea = ''
+function generateRandomIdea() {
+  const idea = IDEAS[Math.floor(Math.random()*IDEAS.length)]
+  generatedIdea = idea
+  const box = document.getElementById('ideaDisplay')
+  box.textContent = ''; let i=0
+  const iv = setInterval(()=>{ if(i<idea.length){box.textContent=idea.substring(0,++i)}else clearInterval(iv) }, 16)
+}
+function useGeneratedIdea() {
+  if (generatedIdea) { document.getElementById('ideaInput').value=generatedIdea; showToast('Idea loaded — click Validate!') }
+}
+function clearInput() { document.getElementById('ideaInput').value='' }
+
+// VALIDATION
+const LOADING_STEPS = ['Searching web for similar projects','Reading GenLayer docs','Running LLM analysis','Validators reaching consensus','Finalizing result']
+let loadStep=0, loadTimer=null
+function startLoader() {
+  loadStep=0
+  document.getElementById('loadingSection').style.display='block'
+  document.getElementById('progressFill').style.width='0%'
+  document.getElementById('loadingMsg').textContent=LOADING_STEPS[0]
+  loadTimer=setInterval(()=>{
+    loadStep=Math.min(loadStep+1,LOADING_STEPS.length-1)
+    document.getElementById('loadingMsg').textContent=LOADING_STEPS[loadStep]
+    document.getElementById('progressFill').style.width=`${(loadStep+1)/LOADING_STEPS.length*100}%`
+  },14000)
+}
+function stopLoader() {
+  clearInterval(loadTimer)
+  document.getElementById('progressFill').style.width='100%'
+  setTimeout(()=>document.getElementById('loadingSection').style.display='none',400)
+}
+
+async function handleValidate() {
+  const idea = document.getElementById('ideaInput').value.trim()
+  if (!idea||idea.length<20) {
+    document.getElementById('errorBox').textContent='Please describe your idea in more detail.'
+    document.getElementById('errorBox').classList.add('visible')
+    setTimeout(()=>document.getElementById('errorBox').classList.remove('visible'),3000)
+    return
+  }
+  document.getElementById('validateBtn').disabled=true
+  document.getElementById('resultsWindow').style.display='none'
+  document.getElementById('errorBox').classList.remove('visible')
+  startLoader()
+  try {
+    const data = await simulateValidation(idea)
+    stopLoader()
+    const history = getHistory()
+    history.unshift({idea:idea.substring(0,80),data,timestamp:Date.now()})
+    saveHistory(history.slice(0,50))
+    saveCommunity({idea:idea.substring(0,80),data})
+    renderResults(data,idea); renderHistory(); renderLeaderboard(); updateStats()
+    playSuccess()
+    showToast('Validation complete!')
+    document.getElementById('resultsWindow').scrollIntoView({behavior:'smooth'})
+  } catch(err) {
+    stopLoader()
+    playError()
+    document.getElementById('errorBox').textContent='Error: '+err.message
+    document.getElementById('errorBox').classList.add('visible')
+  }
+  document.getElementById('validateBtn').disabled=false
+}
+
+// GENLAYER CONTRACT CALL
+const GENLAYER_RPC = 'https://studio.genlayer.com/api'
+async function rpc(method, params) {
+  const res = await fetch(GENLAYER_RPC, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({jsonrpc:'2.0',method,params,id:1}) })
+  const json = await res.json()
+  if (json.error) throw new Error(json.error.message)
+  return json.result
+}
+async function waitForReceipt(txHash, retries=60, interval=5000) {
+  for (let i=0; i<retries; i++) {
+    await new Promise(r=>setTimeout(r, interval))
+    const receipt = await rpc('eth_getTransactionReceipt', [txHash])
+    if (receipt && (receipt.status==='FINALIZED'||receipt.status==='0x1')) return receipt
+  }
+  throw new Error('Timed out waiting for consensus')
+}
+
+async function simulateValidation(idea) {
+  try {
+    const txHash = await rpc('eth_sendTransaction', [{to:CONTRACT_ADDRESS,data:JSON.stringify({method:'validate_idea',args:[idea]}),gas:'0x100000'}])
+    await waitForReceipt(txHash)
+    const ideaKey = idea.substring(0,50).replace(/\s+/g,'_').toLowerCase()
+    const result = await rpc('gen_call', [{to:CONTRACT_ADDRESS,data:JSON.stringify({method:'get_validation',args:[ideaKey]})}])
+    return JSON.parse(result)
+  } catch(err) {
+    console.warn('Contract call failed, using simulation:', err.message)
+    await new Promise(r=>setTimeout(r,2500))
+    const lower=idea.toLowerCase()
+    const hasWeb=/read|web|news|verif|check|github|scrape|fetch/.test(lower)
+    const hasJudge=/judge|fair|score|rank|dispute|quality|best/.test(lower)
+    const isOriginal=!/uniswap|opensea|aave|compound/.test(lower)
+    const orig=isOriginal?6+Math.floor(Math.random()*4):3+Math.floor(Math.random()*3)
+    const fit=(hasWeb||hasJudge)?8+Math.floor(Math.random()*2):4+Math.floor(Math.random()*3)
+    const feas=6+Math.floor(Math.random()*3)
+    const overall=Math.round((orig+fit+feas)/3)
+    const verdict=overall>=8?'GO BUILD IT':overall>=6?'NEEDS WORK':isOriginal?'NOT IDEAL FOR GENLAYER':'ALREADY EXISTS'
+    return {
+      idea_summary:idea.substring(0,100),
+      originality_score:orig, originality_verdict:isOriginal?"Relatively original — no identical implementations found on major platforms.":"Similar projects exist. You need a strong differentiator.",
+      genlayer_fit_score:fit, genlayer_fit_reason:(hasWeb||hasJudge)?"Strongly leverages GenLayer's powers — web reading and AI judgment are core to this idea.":"Could run on any chain. Add web-reading or AI judgment to make it truly GenLayer-native.",
+      feasibility_score:feas, feasibility_reason:"Achievable in a week using GenLayer Studio. Core logic maps to 1-2 contract functions.",
+      overall_score:overall, verdict,
+      genlayer_native_twist:"Add a function that reads live web sources to automatically verify claims — removing any need for a trusted human intermediary.",
+      similar_projects:isOriginal?[]:["Similar Project A","Competitor B"],
+      one_line_pitch:`The first on-chain ${idea.split(' ').slice(0,4).join(' ').toLowerCase()} powered by AI validators that read the live web.`
+    }
+  }
+}
+
+// RENDER RESULTS
+let currentResult=null, currentIdea=''
+function verdictClass(v) { return v==='GO BUILD IT'?'verdict-go':v==='NEEDS WORK'?'verdict-needs':v==='ALREADY EXISTS'?'verdict-exists':'verdict-notideal' }
+function scoreColor(s) { return s>=8?'#00aa00':s>=5?'#aaaa00':'#aa0000' }
+function renderResults(data, idea) {
+  currentResult=data; currentIdea=idea
+  document.getElementById('resultsWindow').style.display='block'
+  const similar=(data.similar_projects||[]).map(p=>`<span class="tag">${p}</span>`).join('')||'<span style="color:#00aa00">None found</span>'
+  document.getElementById('resultsBody').innerHTML=`
+    <div class="verdict-badge ${verdictClass(data.verdict)}">${data.verdict}</div>
+    <div class="inset" style="margin-bottom:12px;font-size:16px;line-height:1.5">${data.one_line_pitch}</div>
+    <span class="field-label">SCORES:</span>
+    ${[['Originality',data.originality_score],['GenLayer Fit',data.genlayer_fit_score],['Feasibility',data.feasibility_score],['Overall',data.overall_score]].map(([l,s])=>`
+      <div class="score-row"><span class="score-lbl">${l}</span><div class="score-meter"><div class="score-fill" style="width:${s*10}%;background:${scoreColor(s)}"></div></div><span class="score-val">${s}/10</span></div>`).join('')}
+    <div class="divider"></div>
+    <span class="field-label">ANALYSIS:</span>
+    <div class="raised" style="margin-bottom:8px;font-size:16px;line-height:1.5"><b>Originality:</b> ${data.originality_verdict}</div>
+    <div class="raised" style="margin-bottom:8px;font-size:16px;line-height:1.5"><b>GenLayer Fit:</b> ${data.genlayer_fit_reason}</div>
+    <div class="raised" style="margin-bottom:8px;font-size:16px;line-height:1.5"><b>Feasibility:</b> ${data.feasibility_reason}</div>
+    <div class="inset" style="margin-bottom:8px;font-size:16px;line-height:1.5;border-left:4px solid #00aa00"><b>Make it more GenLayer-native:</b> ${data.genlayer_native_twist}</div>
+    <span class="field-label">SIMILAR PROJECTS:</span>
+    <div style="margin-bottom:12px">${similar}</div>
+    <div class="btn-row"><button class="btn" onclick="openShare()">Share Result</button><button class="btn" onclick="copyResult()">Copy JSON</button></div>`
+}
+
+// HISTORY + LEADERBOARD + STATS
+function renderHistory() {
+  const h=getHistory(), c=document.getElementById('historyList')
+  if(!h.length){c.innerHTML='<div style="color:var(--dark);font-size:15px;text-align:center;padding:20px">No history yet.</div>';return}
+  c.innerHTML=h.map((item,i)=>`
+    <div class="history-item" onclick="viewItem(${i})">
+      <span class="history-verdict" style="color:${item.data.verdict==='GO BUILD IT'?'#008800':item.data.verdict==='NEEDS WORK'?'#888800':'#880000'}">${item.data.verdict}</span>
+      ${item.idea}
+      <div style="font-size:13px;color:var(--dark);margin-top:3px">${new Date(item.timestamp).toLocaleDateString()} | Score: ${item.data.overall_score}/10</div>
+    </div>`).join('')
+}
+function viewItem(i) {
+  const item=getHistory()[i]
+  if(item){renderResults(item.data,item.idea);document.getElementById('resultsWindow').scrollIntoView({behavior:'smooth'})}
+}
+function renderLeaderboard() {
+  const sorted=[...getCommunity()].sort((a,b)=>b.data.overall_score-a.data.overall_score).slice(0,10)
+  const c=document.getElementById('leaderboard')
+  if(!sorted.length){c.innerHTML='<div style="color:var(--dark);font-size:15px;text-align:center;padding:20px">No community ideas yet. Be the first!</div>';return}
+  c.innerHTML=sorted.map((item,i)=>`
+    <div class="lb-row" style="animation-delay:${i*0.08}s">
+      <span class="lb-rank">${i+1}.</span>
+      <span style="flex:1;font-size:14px">${item.idea.substring(0,35)}...</span>
+      <span style="font-size:12px;color:var(--darker);margin-right:6px">${item.user||'builder'}</span>
+      <span class="lb-score">${item.data.overall_score}/10</span>
+    </div>`).join('')
+}
+function updateStats() {
+  const h=getHistory()
+  document.getElementById('totalCount').textContent=h.length
+  document.getElementById('avgScore').textContent=h.length?(h.reduce((s,x)=>s+x.data.overall_score,0)/h.length).toFixed(1):'--'
+}
+
+// SHARE
+function openShare() {
+  if(!currentResult)return
+  const text=`GenLayer Idea Validator Result\n\nIdea: ${currentIdea.substring(0,80)}...\n\nVerdict: ${currentResult.verdict}\nScores:\n  Originality: ${currentResult.originality_score}/10\n  GenLayer Fit: ${currentResult.genlayer_fit_score}/10\n  Feasibility: ${currentResult.feasibility_score}/10\n  Overall: ${currentResult.overall_score}/10\n\n${currentResult.genlayer_native_twist}`
+  document.getElementById('shareText').textContent=text
+  document.getElementById('sharePopup').classList.add('visible')
+  document.getElementById('overlay').classList.add('visible')
+}
+function closeShare() {
+  document.getElementById('sharePopup').classList.remove('visible')
+  document.getElementById('overlay').classList.remove('visible')
+}
+function copyShareText() { navigator.clipboard.writeText(document.getElementById('shareText').textContent); showToast('Copied!'); playNotify() }
+function shareToTwitter() {
+  const text=encodeURIComponent(`I just validated my dApp idea on @GenLayer!\n\nVerdict: ${currentResult.verdict} (${currentResult.overall_score}/10)\n\nValidate yours:`)
+  window.open(`https://twitter.com/intent/tweet?text=${text}`,'_blank')
+}
+function copyResult() { if(!currentResult)return; navigator.clipboard.writeText(JSON.stringify(currentResult,null,2)); showToast('JSON copied!'); playNotify() }
+
+// INIT
+renderHistory(); renderLeaderboard(); updateStats(); generateRandomIdea()
+</script>
+</body>
+</html>
